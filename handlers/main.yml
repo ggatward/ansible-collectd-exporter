@@ -1,0 +1,7 @@
+---
+- name: restart collectd_exporter
+  become: true
+  systemd:
+    daemon_reload: true
+    name: collectd_exporter
+    state: restarted

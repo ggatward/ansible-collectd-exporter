@@ -1,0 +1,8 @@
+---
+collectd_exporter_version: 0.4.0
+collectd_exporter_web_listen_address: "0.0.0.0:9103"
+collectd_exporter_web_external_url: ""
+
+collectd_exporter_listen_address: "0.0.0.0:25826"
+
+collectd_exporter_config_flags_extra: {}

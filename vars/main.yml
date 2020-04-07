@@ -1,0 +1,10 @@
+---
+go_arch_map:
+  i386: '386'
+  x86_64: 'amd64'
+  aarch64: 'arm64'
+  armv7l: 'armv7'
+  armv6l: 'armv6'
+
+collectd_exporter_system_group: "collectd-exp"
+collectd_exporter_system_user: "{{ collectd_exporter_system_group }}"

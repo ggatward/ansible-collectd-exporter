@@ -1,0 +1,63 @@
+---
+- name: Install dependencies
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items: "{{ collectd_exporter_dependencies }}"
+
+- name: Create the collectd_exporter group
+  group:
+    name: "{{ collectd_exporter_system_group }}"
+    state: present
+    system: true
+
+- name: Create the collectd_exporter user
+  user:
+    name: "{{ collectd_exporter_system_user }}"
+    groups: "{{ collectd_exporter_system_group }}"
+    append: true
+    shell: /usr/sbin/nologin
+    system: true
+    createhome: false
+    home: /
+
+- name: Download collectd_exporter binary to local folder
+  become: false
+  get_url:
+    url: "https://github.com/prometheus/collectd_exporter/releases/download/v{{ collectd_exporter_version }}/collectd_exporter-{{ collectd_exporter_version }}.linux-{{ go_arch_map[ansible_architecture] | default(ansible_architecture) }}.tar.gz"
+    dest: "/tmp/collectd_exporter-{{ collectd_exporter_version }}.linux-{{ go_arch_map[ansible_architecture] | default(ansible_architecture) }}.tar.gz"
+    checksum: "sha256:{{ collectd_exporter_checksum }}"
+  register: _download_binary
+  until: _download_binary is succeeded
+  retries: 5
+  delay: 2
+  delegate_to: localhost
+  check_mode: false
+
+- name: Unpack collectd_exporter binary
+  become: false
+  unarchive:
+    src: "/tmp/collectd_exporter-{{ collectd_exporter_version }}.linux-{{ go_arch_map[ansible_architecture] | default(ansible_architecture) }}.tar.gz"
+    dest: "/tmp"
+    creates: "/tmp/collectd_exporter-{{ collectd_exporter_version }}.linux-{{ go_arch_map[ansible_architecture] | default(ansible_architecture) }}/collectd_exporter"
+  delegate_to: localhost
+  check_mode: false
+
+- name: Propagate collectd_exporter binaries
+  copy:
+    src: "/tmp/collectd_exporter-{{ collectd_exporter_version }}.linux-{{ go_arch_map[ansible_architecture] | default(ansible_architecture) }}/collectd_exporter"
+    dest: "/usr/local/bin/collectd_exporter"
+    mode: 0750
+    owner: "{{ collectd_exporter_system_user }}"
+    group: "{{ collectd_exporter_system_group }}"
+  notify: restart collectd_exporter
+  when: not ansible_check_mode
+
+- name: Copy the collectd_exporter systemd service file
+  template:
+    src: collectd_exporter.service.j2
+    dest: /etc/systemd/system/collectd_exporter.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart collectd_exporter

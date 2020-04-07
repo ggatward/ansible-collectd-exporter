@@ -1,0 +1,42 @@
+{{ ansible_managed | comment}}
+
+[Unit]
+Description=Prometheus collectd_exporter
+After=network-online.target
+StartLimitInterval=0
+
+[Service]
+Type=simple
+User={{ collectd_exporter_system_user }}
+Group={{ collectd_exporter_system_group }}
+ExecStart=/usr/local/bin/collectd_exporter \
+{% if collectd_exporter_web_external_url %}
+  --web.external-url="{{ collectd_exporter_web_external_url }}" \
+{% endif %}
+  --collectd.listen-address="{{ collectd_exporter_listen_address }}" \
+  --web.listen-address={{ collectd_exporter_web_listen_address }}{% for flag, flag_value in collectd_exporter_config_flags_extra.items() %}\
+  --{{ flag }}{% if flag_value %}={{ flag_value }}{% endif %} {% endfor %}
+
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+NoNewPrivileges=true
+{% if collectd_exporter_systemd_version.stdout | int >= 232 %}
+ProtectSystem=strict
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+{% else %}
+ProtectSystem=full
+{% endif %}
+
+{% if http_proxy is defined %}
+Environment="HTTP_PROXY={{ http_proxy }}"{% if https_proxy is defined %} "HTTPS_PROXY={{ https_proxy }}{% endif %}"
+{% endif %}
+
+SyslogIdentifier=collectd_exporter
+Restart=always
+RestartSec=0
+
+[Install]
+WantedBy=multi-user.target
